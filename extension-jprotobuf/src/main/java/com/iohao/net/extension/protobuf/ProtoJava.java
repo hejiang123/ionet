@@ -65,17 +65,31 @@ public class ProtoJava {
         Map<String, String> messageMap = new HashMap<>();
         messageMap.put("className", this.className);
         messageMap.put("fieldsString", fieldsString);
-        messageMap.put("classComment", this.comment);
+        messageMap.put("classComment", formatComment(this.comment));
         messageMap.put("classOrEnum", clazz.isEnum() ? "enum" : "message");
 
         String template = """
-                // {classComment}
+                {classComment}
                 {classOrEnum} {className} {
                 {fieldsString}
                 }
-                
+
                 """;
 
         return StrKit.format(template, messageMap);
+    }
+
+    static String formatComment(String comment) {
+        return formatComment(comment, "");
+    }
+
+    static String formatComment(String comment, String indent) {
+        if (comment == null || comment.isEmpty()) {
+            return "";
+        }
+        return comment.lines()
+                .filter(line -> !line.isBlank())
+                .map(line -> indent + "// " + line)
+                .collect(Collectors.joining("\n"));
     }
 }

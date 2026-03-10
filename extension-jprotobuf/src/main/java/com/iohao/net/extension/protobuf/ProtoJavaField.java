@@ -53,7 +53,7 @@ public class ProtoJavaField {
     private Map<String, String> createParam() {
         Map<String, String> messageMap = new HashMap<>(8);
 
-        messageMap.put("comment", this.comment);
+        messageMap.put("comment", ProtoJava.formatComment(this.comment, "  "));
         messageMap.put("repeated", "");
         messageMap.put("fieldProtoType", this.fieldProtoType);
         messageMap.put("order", String.valueOf(this.order));
@@ -80,9 +80,7 @@ public class ProtoJavaField {
         StringBuilder templateFiled = new StringBuilder();
 
         if (this.comment != null) {
-            templateFiled.append("""
-                      // {comment}
-                    """);
+            templateFiled.append("{comment}\n");
         }
 
         if (fieldIsInEnum) {
