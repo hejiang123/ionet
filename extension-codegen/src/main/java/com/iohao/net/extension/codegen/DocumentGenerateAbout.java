@@ -194,6 +194,30 @@ final class BroadcastGenerate {
                     // If no method name is specified, derive it using the following rule.
                     broadcastDocument.methodName = StrKit.firstCharToUpperCase(broadcastDocument.methodName);
 
+                    // 格式化 dataDescription，为每一行添加 // 前缀
+                    if (broadcastDocument.dataDescription != null) {
+                        String[] lines = broadcastDocument.dataDescription.split("\\r?\\n");
+                        StringBuilder formatted = new StringBuilder();
+
+                        for (String line : lines) {
+                            String trimmed = line.trim();
+
+                            // 跳过只包含 * 的空行
+                            if (trimmed.equals("*") || trimmed.isEmpty()) {
+                                continue;
+                            }
+
+                            // 如果不是第一行，添加换行和 // 前缀
+                            if (formatted.length() > 0) {
+                                formatted.append("\n        // ");
+                            }
+
+                            formatted.append(trimmed);
+                        }
+
+                        broadcastDocument.dataDescription = formatted.toString();
+                    }
+
                     // Generate broadcast usage examples.
                     extractedBroadcastExampleCode(broadcastDocument);
                 }).toList();
