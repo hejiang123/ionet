@@ -68,15 +68,34 @@ final class DefaultLogicServerLoadBalanced implements LogicServerLoadBalanced {
         int id = message.id();
         String tag = message.tag();
 
-        this.tagServerMap.remove(tag);
+        removeIfOwnedByServer(this.tagServerMap, tag, id);
         this.idServerMap.remove(id);
 
 
         var cmdMerges = message.cmdMerges();
         if (cmdMerges != null) {
             for (int cmdMerge : cmdMerges) {
-                this.cmdServerMap.remove(cmdMerge);
+                removeIfOwnedByServer(this.cmdServerMap, cmdMerge, id);
             }
+        }
+    }
+
+    /**
+     * Remove the mapping only when the current owner still belongs to the server going offline.
+     * <p>
+     * During a rolling restart, a replacement server may already have overwritten the same tag or
+     * command route. In that case, the late offline event from the old server must not remove the
+     * replacement mapping.
+     *
+     * @param serverMap current routing map
+     * @param key       route key
+     * @param serverId  offline server id
+     * @param <K>       map key type
+     */
+    private <K> void removeIfOwnedByServer(Map<K, Server> serverMap, K key, int serverId) {
+        Server current = serverMap.get(key);
+        if (current != null && current.id() == serverId) {
+            serverMap.remove(key, current);
         }
     }
 }

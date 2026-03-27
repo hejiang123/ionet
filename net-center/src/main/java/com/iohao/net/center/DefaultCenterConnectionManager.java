@@ -50,6 +50,7 @@ final class DefaultCenterConnectionManager implements CenterConnectionManager {
 
     @Override
     public Stream<ServerMessage> streamServerMessage() {
+        pruneDisconnectedConnections();
         return connectionMap.values().stream().map(CenterClientConnection::getMessage);
     }
 
@@ -65,6 +66,7 @@ final class DefaultCenterConnectionManager implements CenterConnectionManager {
 
     @Override
     public void addConnection(CenterClientConnection connection) {
+        pruneDisconnectedConnections();
         this.publicationMap.put(connection.getNetId(), connection.getPublication());
         this.connectionMap.put(connection.getServerId(), connection);
         this.publisher.addPublication(connection.getPubName(), connection.getPublication());
@@ -78,6 +80,44 @@ final class DefaultCenterConnectionManager implements CenterConnectionManager {
     @Override
     public int poll(FragmentHandler fragmentHandler) {
         return this.subscription.poll(fragmentHandler, 1);
+    }
+
+    /**
+     * Remove center-side snapshots whose Aeron publication has already disconnected.
+     * <p>
+     * Center replay uses this connection registry as the source of truth when a new node joins.
+     * If dead entries are kept here, the center may replay offline servers back to new nodes and
+     * let stale topology overwrite live routing state.
+     * </p>
+     */
+    private void pruneDisconnectedConnections() {
+        List<CenterClientConnection> disconnectedConnections = connectionMap.values().stream()
+                .filter(connection -> !connection.getPublication().isConnected())
+                .toList();
+
+        disconnectedConnections.forEach(this::removeConnection);
+    }
+
+    /**
+     * Drop one disconnected server snapshot and release its publication when no sibling server in
+     * the same net-server process still uses it.
+     *
+     * @param connection disconnected center-side connection metadata
+     */
+    private void removeConnection(CenterClientConnection connection) {
+        this.connectionMap.remove(connection.getServerId(), connection);
+
+        int netId = connection.getNetId();
+        boolean hasSiblingConnection = this.connectionMap.values().stream()
+                .anyMatch(item -> item.getNetId() == netId);
+        if (!hasSiblingConnection) {
+            this.publicationMap.remove(netId, connection.getPublication());
+        }
+
+        Publication publication = connection.getPublication();
+        if (!publication.isClosed()) {
+            publication.close();
+        }
     }
 
     private void init() {
