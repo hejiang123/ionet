@@ -5,7 +5,7 @@
      * @returns {@link RequestCommand} request command
      * @example
      * ${actionSimpleName}.of${actionMethodName}(result => {
-     *     // ioGame: your biz code.
+     *     // your biz code.
      *     result.log("hello ioGame!");
      *     // ${returnComment}
      *     ${exampleCode}
@@ -21,7 +21,7 @@
      * @returns {@link ResponseResult} [${returnComment} : ${returnDataIsList?"list of "}{@link ${returnDataName}}]
      * @example
      * const result = await ${actionSimpleName}.ofAwait${actionMethodName}();
-     * // ioGame: your biz code.
+     * // your biz code.
      * result.log("hello ioGame!");
      * // ${returnComment}
      * ${exampleCode}

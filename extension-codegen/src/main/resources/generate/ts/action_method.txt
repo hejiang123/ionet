@@ -8,7 +8,7 @@
      * // ${bizDataComment}
      * const ${bizDataName}: ${bizDataType} = ...;
      * ${actionSimpleName}.of${actionMethodName}(${bizDataName}, result => {
-     *     // ioGame: your biz code.
+     *     // your biz code.
      *     // ${returnComment}
      *     ${exampleCode}
      *     result.log(value);
@@ -40,7 +40,7 @@
      * // ${bizDataComment}
      * const ${bizDataName}: ${bizDataType} = ...;
      * const result = await ${actionSimpleName}.ofAwait${actionMethodName}(${bizDataName});
-     * // ioGame: your biz code.
+     * // your biz code.
      * // ${returnComment}
      * ${exampleCode}
      * result.log(value);

@@ -8,7 +8,7 @@
     /// // ${bizDataComment}
     /// ${codeEscape(bizDataType)} ${bizDataName} = ...;
     /// ${actionSimpleName}.of${actionMethodName}(${bizDataName}, result => {
-    ///     // ioGame: your biz code.
+    ///     // your biz code.
     ///     // ${returnComment}
     ///     ${exampleCode!}
     ///     result.Log(value);
@@ -33,7 +33,7 @@
     /// // ${bizDataComment}
     /// ${codeEscape(bizDataType)} ${bizDataName} = ...;
     /// var result = await ${actionSimpleName}.ofAwait${actionMethodName}(${bizDataName});
-    /// // ioGame: your biz code.
+    /// // your biz code.
     /// // ${returnComment}
     /// ${exampleCode!}
     /// result.Log(value);

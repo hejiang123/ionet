@@ -5,7 +5,7 @@
     /// <returns>RequestCommand</returns>
     /// <code>
     /// ${actionSimpleName}.of${actionMethodName}(result => {
-    ///     // ioGame: your biz code.
+    ///     // your biz code.
     ///     // ${returnComment}
     ///     ${exampleCode!}
     ///     result.Log(value);
@@ -22,7 +22,7 @@
     /// <returns>ResponseResult，${returnDataIsList?"list of "}<see cref="${returnDataName}"/> ${returnComment}</returns>
     /// <code>
     /// var result = await ${actionSimpleName}.ofAwait${actionMethodName}();
-    /// // ioGame: your biz code.
+    /// // your biz code.
     /// // ${returnComment}
     /// ${exampleCode!}
     /// result.Log(value);
