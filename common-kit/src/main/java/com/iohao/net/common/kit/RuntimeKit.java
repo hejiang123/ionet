@@ -41,6 +41,65 @@ public class RuntimeKit {
     public int availableProcessors2n = availableProcessors2n();
 
     /**
+     * Recommended default stripe count for affinity-based single-thread executor regions.
+     * <p>
+     * The value is intentionally larger than {@link #availableProcessors2n} so key-partitioned
+     * workloads such as room state machines can reduce cross-key queue contention without
+     * expanding without bound.
+     */
+    public int defaultAffinityExecutorSize() {
+        return Math.min(64, normalizePowerOfTwoCeil(Math.max(8, availableProcessors2n << 2)));
+    }
+
+    /**
+     * Recommended hard cap for affinity-based single-thread executor regions.
+     * <p>
+     * The cap grows with CPU count but remains bounded so callers cannot accidentally create
+     * an unbounded number of platform threads.
+     */
+    public int maxAffinityExecutorSize() {
+        return Math.min(128, normalizePowerOfTwoCeil(Math.max(16, availableProcessors2n << 3)));
+    }
+
+    /**
+     * Normalize an affinity executor stripe count.
+     * <p>
+     * Non-positive values use {@link #defaultAffinityExecutorSize()}, positive values are rounded
+     * up to the nearest power of two, and the final value is capped by
+     * {@link #maxAffinityExecutorSize()}.
+     *
+     * @param requestedSize caller-provided stripe count, or {@code <= 0} to use the default
+     * @return normalized power-of-two stripe count within the recommended bounds
+     */
+    public int normalizeAffinityExecutorSize(int requestedSize) {
+        int normalized = requestedSize <= 0
+                ? defaultAffinityExecutorSize()
+                : normalizePowerOfTwoCeil(Math.max(1, requestedSize));
+
+        return Math.min(normalized, maxAffinityExecutorSize());
+    }
+
+    /**
+     * Round up to the nearest power of two.
+     *
+     * @param value the source value
+     * @return the smallest power of two that is greater than or equal to {@code value}
+     */
+    public int normalizePowerOfTwoCeil(int value) {
+        if (value <= 1) {
+            return 1;
+        }
+
+        int n = value - 1;
+        n |= (n >> 1);
+        n |= (n >> 2);
+        n |= (n >> 4);
+        n |= (n >> 8);
+        n |= (n >> 16);
+        return n + 1;
+    }
+
+    /**
      * Round down {@link #availableProcessors} to the nearest power of 2.
      * <p>
      * Uses bit-smearing to fill all bits below the highest set bit,
