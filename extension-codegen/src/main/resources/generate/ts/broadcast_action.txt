@@ -9,7 +9,7 @@ import {CmdKit, ListenCommand, ResponseResult} from "iohao-sdk";
  */
 export class Listener {
 <%for(o in broadcastDocumentList) {%>
-    private static readonly ${o.cmdMethodName}_${o.cmd}_${o.subCmd}: number = CmdKit.mappingBroadcast(${o.cmdMerge}, "${tsString(o.methodDescription)}");
+    public static readonly ${o.cmdMethodName}_${o.cmd}_${o.subCmd}: number = CmdKit.mappingBroadcast(${o.cmdMerge}, "${tsString(o.methodDescription)}");
 <%}%>
 <%for(o in broadcastDocumentList) {%>
 
