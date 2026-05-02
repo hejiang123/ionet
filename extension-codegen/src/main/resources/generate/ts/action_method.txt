@@ -1,15 +1,22 @@
+<%
+var methodCommentText = tsDoc(methodComment);
+var bizDataCommentText = tsDoc(bizDataComment);
+var returnCommentText = tsDoc(returnComment);
+%>
 
     /**
-     * ${methodComment}
-     * @param ${bizDataName} ${bizDataComment}
-     * @param callback ${returnComment} (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
+<% if (methodCommentText != "") { %>     * ${methodCommentText}
+<% } %>     * @param ${bizDataName}<% if (bizDataCommentText != "") { %> ${bizDataCommentText}<% } %>
+     * @param callback<% if (returnCommentText != "") { %> ${returnCommentText}<% } %> (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
      * @returns {@link RequestCommand} request command
      * @example
-     * // ${bizDataComment}
+<% if (bizDataCommentText != "") { %>     * // ${bizDataCommentText}
+<% } %>
      * const ${bizDataName}: ${bizDataType} = ...;
      * ${actionSimpleName}.of${actionMethodName}(${bizDataName}, result => {
      *     // your biz code.
-     *     // ${returnComment}
+<% if (returnCommentText != "") { %>     *     // ${returnCommentText}
+<% } %>
      *     ${exampleCode}
      *     result.log(value);
      * });
@@ -33,15 +40,17 @@
     }
 
     /**
-     * ${methodComment}
-     * @param ${bizDataName} ${bizDataComment}
-     * @returns {@link ResponseResult} ${returnComment} (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
+<% if (methodCommentText != "") { %>     * ${methodCommentText}
+<% } %>     * @param ${bizDataName}<% if (bizDataCommentText != "") { %> ${bizDataCommentText}<% } %>
+     * @returns {@link ResponseResult}<% if (returnCommentText != "") { %> ${returnCommentText}<% } %> (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
      * @example
-     * // ${bizDataComment}
+<% if (bizDataCommentText != "") { %>     * // ${bizDataCommentText}
+<% } %>
      * const ${bizDataName}: ${bizDataType} = ...;
      * const result = await ${actionSimpleName}.ofAwait${actionMethodName}(${bizDataName});
      * // your biz code.
-     * // ${returnComment}
+<% if (returnCommentText != "") { %>     * // ${returnCommentText}
+<% } %>
      * ${exampleCode}
      * result.log(value);
      */

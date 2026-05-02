@@ -8,8 +8,8 @@ import {CmdKit} from "iohao-sdk";
  */
 export class GameCode {
 <%for(o in errorCodeDocumentList) {%>
-    /** ${o.description} */
-    static ${o.name}: number = CmdKit.mappingErrorCode(${o.value}, "${o.description!}");
+    /** ${tsDoc(o.description)} */
+    static ${o.name}: number = CmdKit.mappingErrorCode(${o.value}, "${tsString(o.description)}");
 <%}%>
 
     static init() {

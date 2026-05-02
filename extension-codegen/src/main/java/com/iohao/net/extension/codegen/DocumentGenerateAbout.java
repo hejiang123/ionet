@@ -29,6 +29,8 @@ import java.nio.charset.*;
 import java.util.*;
 import java.util.function.*;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.*;
 import lombok.experimental.*;
 import org.beetl.core.*;
@@ -43,6 +45,15 @@ class DocumentGenerateKit {
     String actionMethodResultExampleTemplatePath = "action_method_result_example.txt";
     String gameCodeTemplatePath = "error_code.txt";
     String actionTemplatePath = "action.txt";
+    private final Pattern JAVADOC_INLINE_LINK_PATTERN = Pattern.compile("\\{@link(?:plain)?\\s+([^}\\s]+)(?:\\s+([^}]+))?}");
+    private final Pattern JAVADOC_INLINE_TEXT_PATTERN = Pattern.compile("\\{@(?:code|literal|value)\\s+([^}]*)}");
+    private final Pattern JAVADOC_EMPTY_INLINE_TAG_PATTERN = Pattern.compile("\\{@(?:docRoot|inheritDoc)\\}");
+    private final Pattern HTML_LIST_ITEM_OPEN_TAG_PATTERN = Pattern.compile("(?is)<li\\b[^>]*>");
+    private final Pattern HTML_LIST_ITEM_CLOSE_TAG_PATTERN = Pattern.compile("(?is)</li\\b[^>]*>");
+    private final Pattern HTML_STRUCTURAL_TAG_PATTERN = Pattern.compile("(?is)</?(?:p|br|div|pre|ul|ol|table|thead|tbody|tfoot|tr|blockquote|h[1-6])\\b[^>]*>");
+    private final Pattern HTML_INLINE_TAG_PATTERN = Pattern.compile("(?is)</?(?:span|a|code|strong|em|b|i|u|small|sup|sub|td|th)\\b[^>]*>");
+    private final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+    private final Pattern PUNCTUATION_SPACE_PATTERN = Pattern.compile("\\s+([,.;:!?，。；：！？])");
 
     static {
         init();
@@ -56,6 +67,8 @@ class DocumentGenerateKit {
             gt.registerFunction("codeEscape", new ExampleCodeEscape());
             gt.registerFunction("originalCode", new ExampleOriginalCode());
             gt.registerFunction("snakeName", new SnakeName());
+            gt.registerFunction("tsString", new TypeScriptString());
+            gt.registerFunction("tsDoc", new TypeScriptDoc());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -84,6 +97,134 @@ class DocumentGenerateKit {
 
                     return result.toString();
                 }).orElse("");
+    }
+
+    /**
+     * Normalizes Javadoc and HTML fragments into plain text for generated source comments.
+     */
+    String toCommentText(Object value) {
+        if (value == null) {
+            return "";
+        }
+
+        String comment = value.toString();
+        if (StrKit.isEmpty(comment)) {
+            return "";
+        }
+
+        comment = comment.replace("\r\n", "\n").replace('\r', '\n');
+        comment = stripJavadocCommentMarkers(comment);
+        comment = replaceJavaDocInlineTags(comment);
+        comment = HTML_LIST_ITEM_OPEN_TAG_PATTERN.matcher(comment).replaceAll("\n- ");
+        comment = HTML_LIST_ITEM_CLOSE_TAG_PATTERN.matcher(comment).replaceAll("\n");
+        comment = HTML_STRUCTURAL_TAG_PATTERN.matcher(comment).replaceAll("\n");
+        comment = HTML_INLINE_TAG_PATTERN.matcher(comment).replaceAll(" ");
+        comment = decodeHtmlEntities(comment);
+        comment = WHITESPACE_PATTERN.matcher(comment).replaceAll(" ").trim();
+        return PUNCTUATION_SPACE_PATTERN.matcher(comment).replaceAll("$1");
+    }
+
+    /**
+     * Escapes normalized comment text for a TypeScript double-quoted string literal.
+     */
+    String toTsStringLiteralText(Object value) {
+        String comment = toCommentText(value);
+        StringBuilder result = new StringBuilder(comment.length() + 16);
+
+        for (int i = 0; i < comment.length(); i++) {
+            char c = comment.charAt(i);
+            switch (c) {
+                case '\\' -> result.append("\\\\");
+                case '"' -> result.append("\\\"");
+                case '\b' -> result.append("\\b");
+                case '\f' -> result.append("\\f");
+                case '\n' -> result.append("\\n");
+                case '\r' -> result.append("\\r");
+                case '\t' -> result.append("\\t");
+                case '\u2028' -> result.append("\\u2028");
+                case '\u2029' -> result.append("\\u2029");
+                default -> {
+                    if (c < 0x20 || c == 0x7F) {
+                        result.append("\\u%04x".formatted((int) c));
+                    } else {
+                        result.append(c);
+                    }
+                }
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
+     * Escapes normalized comment text for a TypeScript JSDoc or line comment context.
+     */
+    String toTsDocText(Object value) {
+        return toCommentText(value).replace("*/", "* /");
+    }
+
+    private String stripJavadocCommentMarkers(String comment) {
+        String[] lines = comment.split("\n", -1);
+        StringBuilder result = new StringBuilder(comment.length());
+
+        for (String line : lines) {
+            String trimmed = line.strip();
+            if (trimmed.equals("*")) {
+                continue;
+            }
+
+            if (trimmed.startsWith("* ")) {
+                trimmed = trimmed.substring(2).strip();
+            }
+
+            if (StrKit.isEmpty(trimmed)) {
+                continue;
+            }
+
+            if (result.length() > 0) {
+                result.append('\n');
+            }
+            result.append(trimmed);
+        }
+
+        return result.toString();
+    }
+
+    private String replaceJavaDocInlineTags(String comment) {
+        Matcher matcher = JAVADOC_INLINE_LINK_PATTERN.matcher(comment);
+        StringBuffer buffer = new StringBuffer(comment.length());
+        while (matcher.find()) {
+            String label = matcher.group(2);
+            String replacement = label != null && !label.isBlank()
+                    ? label
+                    : matcher.group(1);
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(buffer);
+
+        comment = replaceWithFirstGroup(JAVADOC_INLINE_TEXT_PATTERN, buffer.toString());
+        return JAVADOC_EMPTY_INLINE_TAG_PATTERN.matcher(comment).replaceAll("");
+    }
+
+    private String replaceWithFirstGroup(Pattern pattern, String value) {
+        Matcher matcher = pattern.matcher(value);
+        StringBuffer buffer = new StringBuffer(value.length());
+        while (matcher.find()) {
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(matcher.group(1)));
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
+    }
+
+    private String decodeHtmlEntities(String value) {
+        return value.replace("&nbsp;", " ")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#34;", "\"")
+                .replace("&#39;", "'")
+                .replace("&apos;", "'")
+                .replace("&amp;", "&");
     }
 
     class ExampleCodeEscape implements org.beetl.core.Function {
@@ -119,6 +260,22 @@ class DocumentGenerateKit {
             }
 
             return toSnakeName(value.toString());
+        }
+    }
+
+    class TypeScriptString implements org.beetl.core.Function {
+        @Override
+        public Object call(Object[] paras, Context ctx) {
+            Object value = paras == null || paras.length == 0 ? null : paras[0];
+            return toTsStringLiteralText(value);
+        }
+    }
+
+    class TypeScriptDoc implements org.beetl.core.Function {
+        @Override
+        public Object call(Object[] paras, Context ctx) {
+            Object value = paras == null || paras.length == 0 ? null : paras[0];
+            return toTsDocText(value);
         }
     }
 }
@@ -193,29 +350,13 @@ final class BroadcastGenerate {
                 .peek(broadcastDocument -> {
                     // If no method name is specified, derive it using the following rule.
                     broadcastDocument.methodName = StrKit.firstCharToUpperCase(broadcastDocument.methodName);
+                    // Keep broadcast descriptions language-neutral before template-specific escaping.
+                    if (broadcastDocument.methodDescription != null) {
+                        broadcastDocument.methodDescription = DocumentGenerateKit.toCommentText(broadcastDocument.methodDescription);
+                    }
 
-                    // 格式化 dataDescription，为每一行添加 // 前缀
                     if (broadcastDocument.dataDescription != null) {
-                        String[] lines = broadcastDocument.dataDescription.split("\\r?\\n");
-                        StringBuilder formatted = new StringBuilder();
-
-                        for (String line : lines) {
-                            String trimmed = line.trim();
-
-                            // 跳过只包含 * 的空行
-                            if (trimmed.equals("*") || trimmed.isEmpty()) {
-                                continue;
-                            }
-
-                            // 如果不是第一行，添加换行和 // 前缀
-                            if (formatted.length() > 0) {
-                                formatted.append("\n        // ");
-                            }
-
-                            formatted.append(trimmed);
-                        }
-
-                        broadcastDocument.dataDescription = formatted.toString();
+                        broadcastDocument.dataDescription = DocumentGenerateKit.toCommentText(broadcastDocument.dataDescription);
                     }
 
                     // Generate broadcast usage examples.
@@ -363,6 +504,11 @@ class InternalProtoClassKit {
                 .flatMap(actionDoc -> actionDoc.actionCommandDocMap.values().stream())
                 .forEach(actionCommandDoc -> {
                     var actionCommand = actionCommandDoc.actionCommand;
+                    if (Objects.isNull(actionCommand)) {
+                        // Only registered runtime commands can contribute request and response proto types.
+                        return;
+                    }
+
                     // --------- action return class ---------
                     var returnInfo = actionCommand.actionMethodReturn;
                     if (!returnInfo.isVoid()) {
