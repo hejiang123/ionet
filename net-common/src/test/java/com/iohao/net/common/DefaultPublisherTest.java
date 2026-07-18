@@ -137,21 +137,65 @@ class DefaultPublisherTest {
         }
     }
 
+    /** 回归编码异常不得关闭发布链路，后续正常消息仍需成功发送。 */
     @Test
-    void startupDropsMessageOverPublicationLimitAndKeepsProcessingLaterMessages() throws InterruptedException {
+    void startupDropsEncodingFailureAndKeepsProcessingLaterMessages() throws InterruptedException {
         var publisher = new DefaultPublisher();
-        var publication = RecordingPublication.create().setMaxMessageLength(8);
+        var publication = RecordingPublication.create();
         publisher.addPublication("logic", publication);
 
         try {
             publisher.startup();
-            publisher.publishMessage("logic", new PublisherTestKit.OversizedTestMessage(7));
+            publisher.publishMessage("logic", new PublisherTestKit.FailingMessage());
+            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(7));
+
+            PublisherTestKit.awaitUntil(() -> publication.offerCount() == 1);
+
+            assertFalse(publication.isClosed());
+            assertEquals(8, publication.lastOfferLength());
+        } finally {
+            publisher.shutdown();
+        }
+    }
+
+    /** 回归 Aeron 最大消息长度预检只丢弃当前消息，后续合法消息仍需发布。 */
+    @Test
+    void startupDropsMessageAbovePublicationMaximumAndKeepsProcessingLaterMessages() throws InterruptedException {
+        var publisher = new DefaultPublisher();
+        var publication = RecordingPublication.create(8);
+        publisher.addPublication("logic", publication);
+
+        try {
+            publisher.startup();
+            publisher.publishMessage("logic", new PublisherTestKit.LargeMessage());
             publisher.publishMessage("logic", new PublisherTestKit.TestMessage(8));
 
             PublisherTestKit.awaitUntil(() -> publication.offerCount() == 1);
 
-            assertEquals(8, publication.lastOfferLength());
             assertFalse(publication.isClosed());
+            assertEquals(8, publication.lastOfferLength());
+        } finally {
+            publisher.shutdown();
+        }
+    }
+
+    /** 回归 Aeron {@code offer} 抛出异常后不得结束 Publisher 线程。 */
+    @Test
+    void startupDropsOfferExceptionAndKeepsProcessingLaterMessages() throws InterruptedException {
+        var publisher = new DefaultPublisher();
+        var publication = RecordingPublication.create()
+                .setNextOfferException(new IllegalStateException("simulated offer failure"));
+        publisher.addPublication("logic", publication);
+
+        try {
+            publisher.startup();
+            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(9));
+            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(10));
+
+            PublisherTestKit.awaitUntil(() -> publication.offerCount() == 2);
+
+            assertFalse(publication.isClosed());
+            assertEquals(8, publication.lastOfferLength());
         } finally {
             publisher.shutdown();
         }

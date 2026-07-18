@@ -33,6 +33,7 @@ import lombok.experimental.*;
 @FieldDefaults(level = AccessLevel.PUBLIC)
 public class ProtoJavaField {
     boolean repeated;
+    boolean optional;
     String fieldName;
     String comment;
     int order;
@@ -53,8 +54,9 @@ public class ProtoJavaField {
     private Map<String, String> createParam() {
         Map<String, String> messageMap = new HashMap<>(8);
 
-        messageMap.put("comment", this.comment);
+        messageMap.put("comment", ProtoJava.formatComment(this.comment, "  "));
         messageMap.put("repeated", "");
+        messageMap.put("optional", "");
         messageMap.put("fieldProtoType", this.fieldProtoType);
         messageMap.put("order", String.valueOf(this.order));
 
@@ -65,6 +67,10 @@ public class ProtoJavaField {
 
         if (this.repeated) {
             messageMap.put("repeated", "repeated ");
+        }
+
+        if (this.optional && !this.repeated && !this.isMap()) {
+            messageMap.put("optional", "optional ");
         }
 
         return messageMap;
@@ -80,15 +86,13 @@ public class ProtoJavaField {
         StringBuilder templateFiled = new StringBuilder();
 
         if (this.comment != null) {
-            templateFiled.append("""
-                      // {comment}
-                    """);
+            templateFiled.append("{comment}\n");
         }
 
         if (fieldIsInEnum) {
             templateFiled.append("  {repeated}{fieldName} = {order};");
         } else {
-            templateFiled.append("  {repeated}{fieldProtoType} {fieldName} = {order};");
+            templateFiled.append("  {optional}{repeated}{fieldProtoType} {fieldName} = {order};");
         }
 
         return templateFiled.toString();

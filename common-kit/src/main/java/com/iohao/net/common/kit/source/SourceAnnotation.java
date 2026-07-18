@@ -21,9 +21,16 @@ package com.iohao.net.common.kit.source;
 /**
  * Annotation metadata extracted from source.
  *
- * @param typeName fully qualified or simple name of the annotation type
+ * @param typeName   fully qualified or simple name of the annotation type
+ * @param sourceText full annotation text as it appears in source
  * @author 渔民小镇
  * @date 2025-02-27
  */
-public record SourceAnnotation(String typeName) {
+public record SourceAnnotation(String typeName, String sourceText) {
+    /**
+     * Keeps existing callers that only need the annotation type working.
+     */
+    public SourceAnnotation(String typeName) {
+        this(typeName, typeName);
+    }
 }

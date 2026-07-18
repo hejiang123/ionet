@@ -26,6 +26,7 @@ import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.function.*;
+import java.util.regex.*;
 import java.util.stream.*;
 import lombok.extern.slf4j.*;
 
@@ -37,6 +38,9 @@ import lombok.extern.slf4j.*;
  */
 @Slf4j
 public class ProtoJavaAnalyse {
+    private static final Pattern EXPLICIT_REQUIRED_FALSE =
+            Pattern.compile("\\brequired\\s*=\\s*false\\b");
+
     static final Map<String, Map<String, SourceClass>> sourceClassCacheMap = CollKit.ofConcurrentHashMap();
     final Map<ProtoJavaRegionKey, ProtoJavaRegion> protoJavaRegionMap = CollKit.ofConcurrentHashMap();
     final Map<Class<?>, ProtoJava> protoJavaMap = CollKit.ofConcurrentHashMap();
@@ -147,6 +151,7 @@ public class ProtoJavaAnalyse {
 
             ProtoJavaField protoJavaField = new ProtoJavaField();
             protoJavaField.repeated = List.class.equals(fieldTypeClass);
+            protoJavaField.optional = this.hasExplicitRequiredFalse(sourceField);
             protoJavaField.fieldName = fieldName;
             protoJavaField.comment = sourceField != null ? sourceField.getComment() : null;
             protoJavaField.order = order++;
@@ -177,6 +182,28 @@ public class ProtoJavaAnalyse {
                 processFieldProtoJava(protoJavaField);
             }
         }
+    }
+
+    /**
+     * Detects an explicit {@code @Protobuf(required = false)} declaration from source text.
+     */
+    private boolean hasExplicitRequiredFalse(SourceField sourceField) {
+        if (sourceField == null || sourceField.getAnnotations().isEmpty()) {
+            return false;
+        }
+
+        return sourceField.getAnnotations().stream()
+                .filter(annotation -> this.isProtobufAnnotation(annotation.typeName()))
+                .map(SourceAnnotation::sourceText)
+                .filter(Objects::nonNull)
+                .anyMatch(sourceText -> EXPLICIT_REQUIRED_FALSE.matcher(sourceText).find());
+    }
+
+    private boolean isProtobufAnnotation(String typeName) {
+        return typeName != null
+                && (typeName.equals(Protobuf.class.getName())
+                || typeName.equals(Protobuf.class.getSimpleName())
+                || typeName.endsWith("." + Protobuf.class.getSimpleName()));
     }
 
     private String fieldProtoTypeToString(ProtoJavaField protoJavaField, Class<?> fieldTypeClass) {

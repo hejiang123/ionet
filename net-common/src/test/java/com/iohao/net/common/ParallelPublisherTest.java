@@ -145,20 +145,42 @@ class ParallelPublisherTest {
         }
     }
 
+    /** 回归并行发布线程遇到编码异常后不得退出，后续正常消息仍需成功发送。 */
     @Test
-    void startupDropsMessageOverPublicationLimitAndKeepsProcessingLaterMessages() throws InterruptedException {
+    void startupDropsEncodingFailureAndKeepsProcessingLaterMessages() throws InterruptedException {
         var publisher = new ParallelPublisher();
-        var publication = RecordingPublication.create().setMaxMessageLength(8);
+        var publication = RecordingPublication.create();
         publisher.addPublication("logic", publication);
 
         try {
-            publisher.publishMessage("logic", new PublisherTestKit.OversizedTestMessage(7));
-            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(8));
+            publisher.publishMessage("logic", new PublisherTestKit.FailingMessage());
+            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(7));
 
             PublisherTestKit.awaitUntil(() -> publication.offerCount() == 1);
 
-            assertEquals(8, publication.lastOfferLength());
             assertFalse(publication.isClosed());
+            assertEquals(8, publication.lastOfferLength());
+        } finally {
+            publisher.shutdown();
+        }
+    }
+
+    /** 回归并行 Publisher 的 Aeron 提交异常只影响当前消息。 */
+    @Test
+    void startupDropsOfferExceptionAndKeepsProcessingLaterMessages() throws InterruptedException {
+        var publisher = new ParallelPublisher();
+        var publication = RecordingPublication.create()
+                .setNextOfferException(new IllegalStateException("simulated offer failure"));
+        publisher.addPublication("logic", publication);
+
+        try {
+            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(8));
+            publisher.publishMessage("logic", new PublisherTestKit.TestMessage(9));
+
+            PublisherTestKit.awaitUntil(() -> publication.offerCount() == 2);
+
+            assertFalse(publication.isClosed());
+            assertEquals(8, publication.lastOfferLength());
         } finally {
             publisher.shutdown();
         }

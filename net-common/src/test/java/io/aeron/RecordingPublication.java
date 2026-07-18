@@ -34,12 +34,15 @@ import org.agrona.*;
  */
 public final class RecordingPublication extends Publication {
     private static final sun.misc.Unsafe UNSAFE = lookupUnsafe();
+    /** Aeron {@code Publication.maxMessageLength} 私有字段在测试对象中的内存偏移。 */
+    private static final long MAX_MESSAGE_LENGTH_OFFSET = lookupMaxMessageLengthOffset();
 
     private AtomicInteger closeCount;
     private AtomicInteger offerCount;
     private AtomicInteger lastOfferLength;
     private Queue<Long> offerResults;
-    private int maxMessageLength;
+    /** 下一次 {@code offer} 需要抛出的受控测试异常。 */
+    private RuntimeException nextOfferException;
 
     @SuppressWarnings({"unused", "DataFlowIssue"})
     private RecordingPublication() {
@@ -48,13 +51,23 @@ public final class RecordingPublication extends Publication {
     }
 
     public static RecordingPublication create() {
+        return create(Integer.MAX_VALUE);
+    }
+
+    /**
+     * 创建带指定 Aeron 最大消息长度的记录型 Publication。
+     *
+     * @param maxMessageLength 允许发布的最大消息字节数
+     * @return 初始化完成的测试 Publication
+     */
+    public static RecordingPublication create(int maxMessageLength) {
         try {
             var publication = (RecordingPublication) UNSAFE.allocateInstance(RecordingPublication.class);
+            UNSAFE.putInt(publication, MAX_MESSAGE_LENGTH_OFFSET, maxMessageLength);
             publication.closeCount = new AtomicInteger();
             publication.offerCount = new AtomicInteger();
             publication.lastOfferLength = new AtomicInteger();
             publication.offerResults = new ConcurrentLinkedQueue<>();
-            publication.maxMessageLength = Integer.MAX_VALUE;
             return publication;
         } catch (InstantiationException e) {
             throw new AssertionError(e);
@@ -66,8 +79,14 @@ public final class RecordingPublication extends Publication {
         return this;
     }
 
-    public RecordingPublication setMaxMessageLength(int maxMessageLength) {
-        this.maxMessageLength = maxMessageLength;
+    /**
+     * 设置下一次提交需要抛出的异常，用于验证单消息故障隔离。
+     *
+     * @param exception 下一次 {@code offer} 抛出的异常
+     * @return 当前 Publication
+     */
+    public RecordingPublication setNextOfferException(RuntimeException exception) {
+        this.nextOfferException = Objects.requireNonNull(exception);
         return this;
     }
 
@@ -81,11 +100,6 @@ public final class RecordingPublication extends Publication {
 
     public int lastOfferLength() {
         return this.lastOfferLength.get();
-    }
-
-    @Override
-    public int maxMessageLength() {
-        return this.maxMessageLength;
     }
 
     @Override
@@ -134,9 +148,16 @@ public final class RecordingPublication extends Publication {
         this.lastOfferLength.set(length);
     }
 
+    /** 消费一次性异常或预设结果，模拟 Aeron 单次 {@code offer} 的不同终态。 */
     private long nextOfferResult() {
         if (this.isClosed) {
             return Publication.CLOSED;
+        }
+
+        RuntimeException offerException = this.nextOfferException;
+        if (offerException != null) {
+            this.nextOfferException = null;
+            throw offerException;
         }
 
         var result = this.offerResults.poll();
@@ -148,6 +169,16 @@ public final class RecordingPublication extends Publication {
             Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
             return (sun.misc.Unsafe) field.get(null);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
+    /** 查找 Aeron 最大消息长度字段，以便构造不同上限的记录型 Publication。 */
+    private static long lookupMaxMessageLengthOffset() {
+        try {
+            Field field = Publication.class.getDeclaredField("maxMessageLength");
+            return UNSAFE.objectFieldOffset(field);
         } catch (ReflectiveOperationException e) {
             throw new ExceptionInInitializerError(e);
         }

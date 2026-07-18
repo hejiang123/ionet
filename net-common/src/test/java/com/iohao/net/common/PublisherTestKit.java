@@ -41,8 +41,12 @@ final class PublisherTestKit {
             SbeMessageManager.register(TestMessage.class, new TestMessageSbe());
         }
 
-        if (SbeMessageManager.getMessageEncoder(OversizedTestMessage.class) == null) {
-            SbeMessageManager.register(OversizedTestMessage.class, new OversizedTestMessageSbe());
+        if (SbeMessageManager.getMessageEncoder(FailingMessage.class) == null) {
+            SbeMessageManager.register(FailingMessage.class, new FailingMessageSbe());
+        }
+
+        if (SbeMessageManager.getMessageEncoder(LargeMessage.class) == null) {
+            SbeMessageManager.register(LargeMessage.class, new LargeMessageSbe());
         }
     }
 
@@ -62,7 +66,12 @@ final class PublisherTestKit {
     record TestMessage(int value) {
     }
 
-    record OversizedTestMessage(int value) {
+    /** 表示编码阶段必定失败的测试消息，用于验证单消息故障隔离。 */
+    record FailingMessage() {
+    }
+
+    /** 表示编码长度为 9 字节的测试消息，用于验证 Aeron 最大消息长度预检。 */
+    record LargeMessage() {
     }
 
     static final class TestMessageSbe implements MessageSbe<TestMessage> {
@@ -79,16 +88,26 @@ final class PublisherTestKit {
         }
     }
 
-    static final class OversizedTestMessageSbe implements MessageSbe<OversizedTestMessage> {
-        private static final int ENCODED_LENGTH = 16;
+    /** 在编码阶段抛出异常，模拟超长 payload 被 SBE 编码器拒绝。 */
+    static final class FailingMessageSbe implements MessageSbe<FailingMessage> {
+        @Override
+        public void encoder(FailingMessage message, MessageHeaderEncoder headerEncoder, MutableDirectBuffer buffer) {
+            throw new IllegalStateException("simulated encoding failure");
+        }
 
         @Override
-        public void encoder(
-                OversizedTestMessage message,
-                MessageHeaderEncoder headerEncoder,
-                MutableDirectBuffer buffer
-        ) {
-            buffer.putInt(0, message.value());
+        public int limit() {
+            return 0;
+        }
+    }
+
+    /** 返回超过测试 Publication 上限的编码长度，不依赖实际缓冲区写入。 */
+    static final class LargeMessageSbe implements MessageSbe<LargeMessage> {
+        private static final int ENCODED_LENGTH = 9;
+
+        @Override
+        public void encoder(LargeMessage message, MessageHeaderEncoder headerEncoder, MutableDirectBuffer buffer) {
+            buffer.putByte(0, (byte) 1);
         }
 
         @Override

@@ -1,6 +1,10 @@
+<%
+var methodCommentText = tsDoc(methodComment);
+%>
 
     /**
-     * ${methodComment}
+<% if (methodCommentText != "") { %>     * ${methodCommentText}
+<% } %>
      * @returns RequestCommand void
      * @example
      * ${actionSimpleName}.of${actionMethodName}();

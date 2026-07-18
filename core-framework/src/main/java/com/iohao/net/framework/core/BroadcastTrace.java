@@ -27,6 +27,7 @@ import com.iohao.net.framework.protocol.*;
  * @author 渔民小镇
  * @date 2022-05-19
  */
+@Enterprise
 public interface BroadcastTrace {
     void trace(BroadcastMessage message);
 

@@ -112,6 +112,14 @@ public interface UserSessions<SessionContext, Session extends UserSession> exten
     boolean settingUserId(long userChannelId, long userId);
 
     /**
+     * Unbinds the authenticated user id from a session while keeping the underlying connection alive.
+     *
+     * @param userId authenticated user id
+     * @return the session's userChannelId if unbound successfully, otherwise {@code 0}
+     */
+    long unbindUserId(long userId);
+
+    /**
      * Removes UserSession.
      *
      * @param userSession userSession

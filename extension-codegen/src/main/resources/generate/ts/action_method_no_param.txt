@@ -1,13 +1,18 @@
+<%
+var methodCommentText = tsDoc(methodComment);
+var returnCommentText = tsDoc(returnComment);
+%>
 
     /**
-     * ${methodComment}
-     * @param callback ${returnComment} (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
+<% if (methodCommentText != "") { %>     * ${methodCommentText}
+<% } %>     * @param callback<% if (returnCommentText != "") { %> ${returnCommentText}<% } %> (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
      * @returns {@link RequestCommand} request command
      * @example
      * ${actionSimpleName}.of${actionMethodName}(result => {
      *     // your biz code.
      *     result.log("hello ioGame!");
-     *     // ${returnComment}
+<% if (returnCommentText != "") { %>     *     // ${returnCommentText}
+<% } %>
      *     ${exampleCode}
      *     result.log(value);
      * });
@@ -17,13 +22,14 @@
     }
 
     /**
-     * ${methodComment}
-     * @returns {@link ResponseResult} [${returnComment} : ${returnDataIsList?"list of "}{@link ${returnDataName}}]
+<% if (methodCommentText != "") { %>     * ${methodCommentText}
+<% } %>     * @returns {@link ResponseResult}<% if (returnCommentText != "") { %> ${returnCommentText}<% } %> (returnType: ${returnDataIsList?"list of "}{@link ${returnDataName}})
      * @example
      * const result = await ${actionSimpleName}.ofAwait${actionMethodName}();
      * // your biz code.
      * result.log("hello ioGame!");
-     * // ${returnComment}
+<% if (returnCommentText != "") { %>     * // ${returnCommentText}
+<% } %>
      * ${exampleCode}
      * result.log(value);
      */

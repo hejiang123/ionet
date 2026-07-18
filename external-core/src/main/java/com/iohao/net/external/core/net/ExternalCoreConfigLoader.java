@@ -44,5 +44,6 @@ public class ExternalCoreConfigLoader implements CoreConfigLoader {
         OnExternalManager.register(new AttachmentUpdateOnExternal());
         OnExternalManager.register(new ForcedOfflineOnExternal());
         OnExternalManager.register(new ExistUserOnExternal());
+        OnExternalManager.register(new UnbindUserIdOnExternal());
     }
 }

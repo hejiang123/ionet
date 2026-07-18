@@ -46,7 +46,13 @@ public final class ActionDocument {
 
     void analyse() {
         actionDoc.stream().forEach(actionCommandDoc -> {
-            var cmdInfo = actionCommandDoc.actionCommand.cmdInfo;
+            var actionCommand = actionCommandDoc.actionCommand;
+            if (Objects.isNull(actionCommand)) {
+                // Source parsing may find docs for methods that were not registered as runtime commands.
+                return;
+            }
+
+            var cmdInfo = actionCommand.cmdInfo;
             var authentication = DocumentHelper.getDocumentAccessAuthentication();
             var cmdMerge = cmdInfo.cmdMerge();
             if (authentication.reject(cmdMerge)) {

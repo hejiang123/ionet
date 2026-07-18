@@ -35,10 +35,23 @@ public final class SourceField {
     final String name;
     final String comment;
     final List<Object> enumConstantArguments;
+    final List<SourceAnnotation> annotations;
 
+    /**
+     * Keeps source-field construction compatible for callers that do not need annotations.
+     */
     public SourceField(String name, String comment, List<Object> enumConstantArguments) {
+        this(name, comment, enumConstantArguments, Collections.emptyList());
+    }
+
+    /**
+     * Creates source metadata for a field, including Javadoc, enum arguments, and field annotations.
+     */
+    public SourceField(String name, String comment, List<Object> enumConstantArguments,
+                       List<SourceAnnotation> annotations) {
         this.name = name;
         this.comment = comment;
         this.enumConstantArguments = enumConstantArguments;
+        this.annotations = annotations == null ? Collections.emptyList() : List.copyOf(annotations);
     }
 }

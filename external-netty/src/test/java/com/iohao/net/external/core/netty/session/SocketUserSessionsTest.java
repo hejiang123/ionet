@@ -61,6 +61,34 @@ public class SocketUserSessionsTest {
     }
 
     @Test
+    public void unbindUserIdShouldKeepChannelSessionForRelogin() {
+        var holder = newSession();
+        var userSessions = holder.userSessions();
+        var userSession = holder.userSession();
+        long userChannelId = userSession.getUserChannelId();
+
+        assertTrue(userSessions.settingUserId(userChannelId, 1001));
+        assertSame(userSession, userSessions.getUserSession(1001));
+        assertTrue(userSession.isVerifyIdentity());
+
+        assertEquals(userChannelId, userSessions.unbindUserId(1001));
+        assertNull(userSessions.getUserSession(1001));
+        assertSame(userSession, userSessions.getUserSessionByUserChannelId(userChannelId));
+        assertEquals(0, userSession.getUserId());
+        assertFalse(userSession.isVerifyIdentity());
+        assertTrue(holder.channel().isOpen());
+
+        assertTrue(userSessions.settingUserId(userChannelId, 2002));
+        assertSame(userSession, userSessions.getUserSession(2002));
+        assertEquals(2002, userSession.getUserId());
+        assertTrue(userSession.isVerifyIdentity());
+
+        userSessions.removeUserSession(userSession);
+        assertUserSessionRemoved(userSessions, 2002);
+        holder.channel().finishAndReleaseAll();
+    }
+
+    @Test
     public void settingUserIdShouldAllowOnlyOneConcurrentIdentity() throws Exception {
         var holder = newSession();
         var userSessions = holder.userSessions();

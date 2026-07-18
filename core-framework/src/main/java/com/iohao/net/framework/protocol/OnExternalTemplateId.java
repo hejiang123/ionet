@@ -37,4 +37,6 @@ public interface OnExternalTemplateId {
     int attachmentUpdate = -3;
     /** Template id for setting (binding) a user id to a session. */
     int settingUserId = -4;
+    /** Template id for unbinding a user id from a session while keeping the channel connected. */
+    int unbindUserId = -5;
 }

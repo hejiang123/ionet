@@ -35,6 +35,7 @@ import lombok.experimental.*;
 @FieldDefaults(level = AccessLevel.PROTECTED)
 abstract sealed class AbstractThreadExecutorRegion implements ThreadExecutorRegion
         permits
+        AffinityThreadExecutorRegion,
         UserThreadExecutorRegion,
         UserVirtualThreadExecutorRegion,
         SimpleThreadExecutorRegion {

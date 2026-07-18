@@ -1,10 +1,15 @@
+<%
+var methodCommentText = tsDoc(methodComment);
+var bizDataCommentText = tsDoc(bizDataComment);
+%>
 
     /**
-     * ${methodComment}
-     * @param ${bizDataName} ${bizDataComment}。
+<% if (methodCommentText != "") { %>     * ${methodCommentText}
+<% } %>     * @param ${bizDataName}<% if (bizDataCommentText != "") { %> ${bizDataCommentText}<% } %>。
      * @returns RequestCommand void
      * @example
-     * // ${bizDataComment}
+<% if (bizDataCommentText != "") { %>     * // ${bizDataCommentText}
+<% } %>
      * const ${bizDataName}: ${bizDataType} = ...;
      * ${actionSimpleName}.of${actionMethodName}(${bizDataName});
      */

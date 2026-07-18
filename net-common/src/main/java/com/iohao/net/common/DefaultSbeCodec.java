@@ -18,7 +18,6 @@
  */
 package com.iohao.net.common;
 
-import com.iohao.net.common.kit.StrKit;
 import com.iohao.net.framework.protocol.*;
 import com.iohao.net.sbe.*;
 
@@ -51,7 +50,6 @@ public class DefaultSbeCodec implements SbeCodec {
                 .logicServerId(message.getLogicServerId())
                 .sourceServerId(message.getSourceServerId())
                 .nanoTime(message.getNanoTime())
-                .traceId(message.getTraceId())
         ;
     }
 
@@ -64,9 +62,5 @@ public class DefaultSbeCodec implements SbeCodec {
         message.setLogicServerId(common.logicServerId());
         message.setSourceServerId(common.sourceServerId());
         message.setNanoTime(common.nanoTime());
-
-        if (StrKit.isNotEmpty(common.traceId())) {
-            message.setTraceId(common.traceId());
-        }
     }
 }

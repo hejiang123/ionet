@@ -29,10 +29,8 @@ import com.iohao.net.framework.core.exception.*;
 import com.iohao.net.framework.protocol.*;
 import com.iohao.net.server.balanced.*;
 import com.iohao.net.server.connection.*;
-
 import java.util.*;
 import java.util.concurrent.*;
-
 import lombok.*;
 import lombok.experimental.*;
 import lombok.extern.slf4j.*;
@@ -92,11 +90,6 @@ public class DefaultCommunicationAggregation implements CommunicationAggregation
 
     @Override
     public void broadcast(BroadcastUserMessage message) {
-
-        if (CoreGlobalConfig.broadcastTrace != null) {
-            CoreGlobalConfig.broadcastTrace.trace(message);
-        }
-
         int serverId = message.getExternalServerId();
         if (serverId != 0) {
             connectionManager.publishMessage(serverId, message);
@@ -117,10 +110,6 @@ public class DefaultCommunicationAggregation implements CommunicationAggregation
         externalServerLoadBalanced.listServer().forEach(server -> {
             connectionManager.publishMessage(server.id(), message);
         });
-
-        if (CoreGlobalConfig.broadcastTrace != null) {
-            CoreGlobalConfig.broadcastTrace.trace(message);
-        }
     }
 
     @Override
@@ -128,10 +117,6 @@ public class DefaultCommunicationAggregation implements CommunicationAggregation
         externalServerLoadBalanced.listServer().forEach(server -> {
             connectionManager.publishMessage(server.id(), message);
         });
-
-        if (CoreGlobalConfig.broadcastTrace != null) {
-            CoreGlobalConfig.broadcastTrace.trace(message);
-        }
     }
 
     @Override

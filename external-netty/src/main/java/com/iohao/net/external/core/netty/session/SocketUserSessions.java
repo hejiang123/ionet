@@ -120,6 +120,38 @@ public final class SocketUserSessions extends AbstractUserSessions<ChannelHandle
         return true;
     }
 
+    /**
+     * Remove the verified user id mapping while preserving the channel-scoped session for a future login.
+     *
+     * @param userId business user id
+     * @return userChannelId when unbound successfully, otherwise 0
+     */
+    @Override
+    public long unbindUserId(long userId) {
+        SocketUserSession userSession = this.getUserSession(userId);
+        if (userSession == null) {
+            return 0;
+        }
+
+        synchronized (userSession.lifecycleLock()) {
+            if (userSession.getState() == UserSessionState.DEAD) {
+                this.removeUserSessionMap(userSession);
+                return 0;
+            }
+
+            if (!userSession.isVerifyIdentity() || userSession.getUserId() != userId) {
+                return 0;
+            }
+
+            this.userIdMap.remove(userId, userSession);
+            userSession.userId = 0;
+            userSession.option(UserSessionOption.verifyIdentity, false);
+            userSession.setAttachment(null);
+            userSession.setBindingLogicServerIds(CommonConst.emptyInts);
+            return userSession.getUserChannelId();
+        }
+    }
+
     @Override
     public void removeUserSession(SocketUserSession userSession) {
         if (userSession == null) {

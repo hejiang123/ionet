@@ -18,7 +18,6 @@
  */
 package com.iohao.net.external.core.config;
 
-import com.iohao.net.common.kit.trace.TraceKit;
 import com.iohao.net.external.core.hook.*;
 import com.iohao.net.external.core.hook.cache.*;
 import com.iohao.net.external.core.hook.internal.*;
@@ -51,5 +50,6 @@ public class ExternalGlobalConfig {
     public ExternalCmdCache externalCmdCache;
 
     /** Optional hook used to enrich incoming user requests before dispatch. */
-    public UserRequestEnhance userRequestEnhance = message -> message.setTraceId(TraceKit.newTraceId());
+    public UserRequestEnhance userRequestEnhance = _ -> {
+    };
 }

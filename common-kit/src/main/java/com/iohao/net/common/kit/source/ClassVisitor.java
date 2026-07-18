@@ -90,8 +90,9 @@ final class ClassVisitor extends TreeScanner<Void, Void> {
                     var fieldPath = TreePath.getPath(this.unit, variableTree);
                     var fieldComment = extractComment(fieldPath);
                     var enumArgs = extractEnumConstantArguments(variableTree);
+                    var fieldAnnotations = extractAnnotations(variableTree.getModifiers());
 
-                    fields.add(new SourceField(fieldName, fieldComment, enumArgs));
+                    fields.add(new SourceField(fieldName, fieldComment, enumArgs, fieldAnnotations));
                 }
                 default -> {}
             }
@@ -167,7 +168,7 @@ final class ClassVisitor extends TreeScanner<Void, Void> {
         var list = new ArrayList<SourceAnnotation>(annotations.size());
         for (var annotation : annotations) {
             var typeName = annotation.getAnnotationType().toString();
-            list.add(new SourceAnnotation(typeName));
+            list.add(new SourceAnnotation(typeName, annotation.toString()));
         }
         return list;
     }
@@ -222,14 +223,9 @@ final class ClassVisitor extends TreeScanner<Void, Void> {
                 return Collections.emptyList();
             }
 
-            var list = new ArrayList<>(args.size());
+            var list = new ArrayList<Object>(args.size());
             for (var arg : args) {
-                if (arg instanceof com.sun.source.tree.LiteralTree literalTree) {
-                    Object value = literalTree.getValue();
-                    list.add(value != null ? value : arg.toString());
-                } else {
-                    list.add(arg.toString());
-                }
+                list.add(arg.toString());
             }
             return list;
         }
