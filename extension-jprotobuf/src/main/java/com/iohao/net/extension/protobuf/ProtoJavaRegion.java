@@ -19,7 +19,6 @@
 package com.iohao.net.extension.protobuf;
 
 import com.iohao.net.common.kit.*;
-import com.iohao.net.common.kit.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import lombok.*;
@@ -82,10 +81,9 @@ public class ProtoJavaRegion {
         String protoHead = this.regionHead.toProtoHead();
 
         String firstLine = """
-                // GeneratedTime: %s
                 // ProtocolSize: %s
                 // https://github.com/iohao/ionet
-                """.formatted(TimeFormatKit.format(TimeKit.nowLocalDate(), "yyyy-MM-dd"), protoJavaList.size());
+                """.formatted(protoJavaList.size());
 
         StringBuilder builder = new StringBuilder();
         builder.append(firstLine);
